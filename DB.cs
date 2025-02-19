@@ -1,21 +1,15 @@
 ﻿using Microsoft.Data.Sqlite;
 using MySql.Data.MySqlClient;
-using System;
-using System.Collections.Generic;
 using System.Data;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using TShockAPI.DB;
 
 namespace InventoryManager
 {
     public class DB
     {
-        public static IDbConnection db;
+        public static readonly IDbConnection db = new SqliteConnection("Data Sourece=" + Path.Combine("InventoryManager.sqlite"));
         public static void Setup()
         {
-            db = new SqliteConnection(@"Data Source=tshock\InventoryManager.sqlite");
             SqlTableCreator sqlTable = new(db, new SqliteQueryCreator());
             sqlTable.EnsureTableStructure(new SqlTable("Inventories",
                 new SqlColumn("Username", MySqlDbType.Text),
@@ -38,7 +32,8 @@ namespace InventoryManager
                 new SqlColumn("PantsColor", MySqlDbType.Text),
                 new SqlColumn("ShoeColor", MySqlDbType.Text),
                 new SqlColumn("HideMisc", MySqlDbType.Text),
-                new SqlColumn("SuperCart", MySqlDbType.Text)));
+                new SqlColumn("SuperCart", MySqlDbType.Text),
+                new SqlColumn("IsPrivate", MySqlDbType.Int32)));
         }
     }
 }
