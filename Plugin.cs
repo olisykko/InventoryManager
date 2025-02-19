@@ -59,7 +59,7 @@ namespace InventoryManager
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
-                        bool? setPrivate = e.Parameters.IndexInRange(2) ? (bool.TryParse(e.Parameters[0], out bool result) ? (bool?)result : null) : null;
+                        bool? setPrivate = e.Parameters.IndexInRange(2) ? (bool.TryParse(e.Parameters[2], out bool result) ? (bool?)result : null) : null;
                         if (inventoryManager.Save(name, setPrivate))
                             e.Player.SendSuccessMessage("Вы сохранили инвентарь '{0}'! Настройка приватности: {1}", name, inventoryManager.GetPlayerInventories().First(i => i.name == name).isPrivate);
                     }

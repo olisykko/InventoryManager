@@ -274,7 +274,7 @@ namespace InventoryManager
                 var skinVariant = Player.TPlayer.skinVariant;
                 var hair = Player.TPlayer.hair;
 
-                bool isPrivate = setPrivate == null ? Find(name) && GetPlayerInventories().Find(i => i.name == name).isPrivate : (bool)setPrivate;
+                bool isPrivate = setPrivate ?? Find(name) && GetPlayerInventories().Find(i => i.name == name).isPrivate;
                 DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name);
                 return DB.db.Query(@"INSERT INTO Inventories VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13, @14, @15, @16, @17, @18, @19, @20, @21)",
                     Player.Account.Name,
