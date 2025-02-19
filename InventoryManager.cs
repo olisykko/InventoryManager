@@ -240,9 +240,13 @@ namespace InventoryManager
                 return DB.db.Query("UPDATE SavedInventoryData SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, UserId, name) > 0;
             return false;
         }
-        public bool SetPrivacy(string name, bool isPrivate)
+        public bool SetPrivacy(string name, out bool isPrivate)
         {
-            return DB.db.Query("UPDATE Inventories SET IsPrivate = @0 WHERE UserID = @1 AND Name = @2", isPrivate.ToInt(), UserId, name) > 0;
+            isPrivate = false;
+            var inventory = GetPlayerInventories().Find(i => i.name == name);
+            if (inventory != null)
+                return DB.db.Query("UPDATE Inventories SET IsPrivate = @0 WHERE UserID = @1 AND Name = @2", (isPrivate = !inventory.isPrivate).ToInt(), UserId, name) > 0;
+            return false;
         }
         public bool Delete(string name)
         {
@@ -274,7 +278,7 @@ namespace InventoryManager
                 var skinVariant = Player.TPlayer.skinVariant;
                 var hair = Player.TPlayer.hair;
 
-                bool isPrivate = setPrivate ?? Find(name) && GetPlayerInventories().Find(i => i.name == name).isPrivate;
+                bool isPrivate = setPrivate ?? (GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true);
                 DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name);
                 return DB.db.Query(@"INSERT INTO Inventories VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13, @14, @15, @16, @17, @18, @19, @20, @21)",
                     Player.Account.Name,
@@ -310,7 +314,7 @@ namespace InventoryManager
         public bool Load(string name, string owner = null)
         {
             var inventory = GetPlayerInventories(true).Find(i => i.name == name &&
-            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? i.owner == Player.Account.Name : i.owner == owner)));
+            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? owner == Player.Account.Name : i.owner == owner)));
             if (inventory != null)
             {
                 SSC();
@@ -393,7 +397,7 @@ namespace InventoryManager
         public void ShowInventoryInfo(string name, string owner = null)
         {
             var inventory = GetPlayerInventories(true).Find(i => i.name == name && 
-            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? i.owner == Player.Account.Name : i.owner == owner)));
+            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? owner == Player.Account.Name : i.owner == owner)));
             if (inventory == null)
             {
                 Player.SendErrorMessage("Инвентарь не найден или является приватным!");

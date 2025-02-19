@@ -34,8 +34,7 @@ namespace InventoryManager
                     e.Player.SendInfoMessage("/inv del <Inventory Name> (Удаляет ваш инвентарь.)");
                     e.Player.SendInfoMessage("/inv list <Page?> (Список ваших или публичных инвентарей.)");
                     e.Player.SendInfoMessage("/inv info <Inventory Name> <Owner? (Account Name)> (Информация о инвентаре.)");
-                    e.Player.SendInfoMessage("/inv private <Inventory Name> (Делает ваш инвентарь приватным.)");
-                    e.Player.SendInfoMessage("/inv public <Inventory Name> (Делает ваш инвентарь публичным.)");
+                    e.Player.SendInfoMessage("/inv privacy <Inventory Name> (Изменяет публичность инвентаря.)");
                     return;
                 case "load":
                     {
@@ -115,7 +114,7 @@ namespace InventoryManager
                             e.Player.SendErrorMessage("Инвентарь '{0}' не найден!", oldName);
                     }
                     return;
-                case "private":
+                case "privacy":
                     {
                         if (e.Parameters.Count < 2)
                         {
@@ -123,24 +122,10 @@ namespace InventoryManager
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
-                        if (inventoryManager.SetPrivacy(name, true))
-                            e.Player.SendSuccessMessage("Инвентарь '{0}' теперь приватный!", name);
+                        if (inventoryManager.SetPrivacy(name, out var isPrivate))
+                            e.Player.SendSuccessMessage("Инвентарь '{0}' теперь {1}!", name, isPrivate ? "приватный" : "публичный");
                         else
                             e.Player.SendErrorMessage("Инвентарь '{0}' не найден! ", name);
-                    }
-                    return;
-                case "public":
-                    {
-                        if (e.Parameters.Count < 2)
-                        {
-                            e.Player.SendErrorMessage("Вы должны ввести название инвентаря!");
-                            return;
-                        }
-                        string name = e.Parameters[1].ToLower();
-                        if (inventoryManager.SetPrivacy(name, false))
-                            e.Player.SendSuccessMessage("Инвентарь '{0}' теперь публичный!", name);
-                        else
-                            e.Player.SendErrorMessage("Инвентарь '{0}' не найден!", name);
                     }
                     return;
                 case "info":
