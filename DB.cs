@@ -7,7 +7,7 @@ namespace InventoryManager
 {
     public class DB
     {
-        public static readonly IDbConnection db = new SqliteConnection("Data Sourece=" + Path.Combine("InventoryManager.sqlite"));
+        public static readonly IDbConnection db = new SqliteConnection("Data Source=" + Path.Combine("tshock", "InventoryManager.sqlite"));
         public static void Setup()
         {
             SqlTableCreator sqlTable = new(db, new SqliteQueryCreator());
