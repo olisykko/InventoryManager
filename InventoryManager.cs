@@ -237,7 +237,7 @@ namespace InventoryManager
         {
             exists = Find(newName);
             if (Find(name) && !exists)
-                return DB.db.Query("UPDATE SavedInventoryData SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, UserId, name) > 0;
+                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, UserId, name) > 0;
             return false;
         }
         public bool SetPrivacy(string name, out bool isPrivate)
@@ -250,7 +250,7 @@ namespace InventoryManager
         }
         public bool Delete(string name)
         {
-            return DB.db.Query("DELETE FROM SavedInventoryData WHERE UserID = @0 AND Name = @1", UserId, name) > 0;
+            return DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name) > 0;
         }
         public bool Save(string name, bool? setPrivate = null)
         {
