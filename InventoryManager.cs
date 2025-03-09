@@ -326,20 +326,17 @@ namespace InventoryManager
                     Player.TPlayer.inventory[i].prefix = inventory.inventory[i].prefix;
                     NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i, inventory.inventory[i].prefix);
                 }
-
                 for (int i = 0; i < 20; i++)
                 {
                     Player.TPlayer.armor[i].SetDefaults(inventory.armor[i].type);
                     Player.TPlayer.armor[i].Prefix(inventory.armor[i].prefix);
                     NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 59, inventory.armor[i].prefix);
                 }
-
                 for (int i = 0; i < 10; i++)
                 {
                     Player.TPlayer.dye[i].SetDefaults(inventory.dyes[i]);
                     NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 79);
                 }
-
                 for (int i = 0; i < 5; i++)
                 {
                     Player.TPlayer.miscEquips[i].SetDefaults(inventory.miscEquips[i]);
@@ -347,7 +344,6 @@ namespace InventoryManager
                     NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 89);
                     NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 94);
                 }
-
                 Player.TPlayer.shoeColor = inventory.shoeColor;
                 Player.TPlayer.pantsColor = inventory.pantsColor;
                 Player.TPlayer.underShirtColor = inventory.underShirtColor;

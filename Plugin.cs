@@ -9,7 +9,7 @@ namespace InventoryManager
     {
         public override string Author => "oli & SteelSeries";
         public override string Name => "InventoryManager";
-        public override Version Version => new("1.2");
+        public override Version Version => new("1.3");
 
         public Plugin(Main main) : base(main) { }
         public override void Initialize()
@@ -19,13 +19,8 @@ namespace InventoryManager
         }
         private static void OnInventory(CommandArgs e)
         {
-            if (!e.Player.IsLoggedIn)
-            {
-                e.Player.SendErrorMessage("Войдите в аккаунт чтобы использовать команду.");
-                return;
-            }
             InventoryManager inventoryManager = new(e.Player);
-            switch (e.Parameters.Count < 1 ? "help" : e.Parameters[0].ToLower())
+            switch (e.Parameters.Count == 0 ? "help" : e.Parameters[0].ToLower())
             {
                 case "help":
                     e.Player.SendInfoMessage("/inv save <Inventory Name> <Private? (true/false)> (Сохраняет инвентарь.)");
@@ -47,7 +42,10 @@ namespace InventoryManager
                         if (inventoryManager.Load(name, e.Parameters.IndexInRange(2) ? e.Parameters[2] : null))
                             e.Player.SendSuccessMessage("Вы загрузили инвентарь '{0}'!", name);
                         else
+                        {
                             e.Player.SendErrorMessage("Инвентарь не найден или является приватным! '{0}'", name);
+                            e.Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
+                        }
                     }
                     return;
                 case "save":
@@ -55,6 +53,11 @@ namespace InventoryManager
                         if (e.Parameters.Count < 2)
                         {
                             e.Player.SendErrorMessage("Вы должны ввести название инвентаря!");
+                            return;
+                        }
+                        if (!e.Player.IsLoggedIn)
+                        {
+                            e.Player.SendErrorMessage("Вы должны быть зарегистрированы, чтобы сохранять инвентари!");
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
@@ -65,16 +68,11 @@ namespace InventoryManager
                     return;
                 case "list":
                     {
-                        if (!e.Player.IsLoggedIn)
-                        {
-                            e.Player.SendErrorMessage("Войдите в аккаунт чтобы использовать команду.");
-                            return;
-                        }
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
                         var inventoryList = from inventory in inventoryManager.GetPlayerInventories(true)
-                                          where !inventory.isPrivate || inventory.owner == e.Player.Account.Name
-                                          select $"{inventory.name} (Owner: {inventory.owner})";
+                                            where !inventory.isPrivate || inventory.owner == e.Player.Account.Name
+                                            select $"{inventory.name} (Owner: {inventory.owner})";
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
@@ -84,6 +82,8 @@ namespace InventoryManager
                     }
                     return;
                 case "del":
+                case "delete":
+                case "remove":
                     {
                         if (e.Parameters.Count < 2)
                         {
@@ -115,10 +115,17 @@ namespace InventoryManager
                     }
                     return;
                 case "privacy":
+                case "private":
+                case "public":
                     {
                         if (e.Parameters.Count < 2)
                         {
                             e.Player.SendErrorMessage("Вы должны ввести название инвентаря!");
+                            return;
+                        }
+                        if (!e.Player.IsLoggedIn)
+                        {
+                            e.Player.SendErrorMessage("Войдите в аккаунт чтобы использовать команду.");
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
@@ -139,7 +146,7 @@ namespace InventoryManager
                     }
                     return;
                 default:
-                        goto case "help";
+                    goto case "help";
             }
         }
     }
