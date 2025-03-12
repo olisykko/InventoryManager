@@ -9,7 +9,7 @@ namespace InventoryManager
     {
         public override string Author => "oli & SteelSeries";
         public override string Name => "InventoryManager";
-        public override Version Version => new("1.3");
+        public override Version Version => new("1.5");
 
         public Plugin(Main main) : base(main) { }
         public override void Initialize()
@@ -43,7 +43,7 @@ namespace InventoryManager
                             e.Player.SendSuccessMessage("Вы загрузили инвентарь '{0}'!", name);
                         else
                         {
-                            e.Player.SendErrorMessage("Инвентарь не найден или является приватным! '{0}'", name);
+                            e.Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
                             e.Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
                         }
                     }
@@ -70,9 +70,7 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
-                        var inventoryList = from inventory in inventoryManager.GetPlayerInventories(true)
-                                            where !inventory.isPrivate || inventory.owner == e.Player.Account.Name
-                                            select $"{inventory.name} (Owner: {inventory.owner})";
+                        var inventoryList = inventoryManager.GetPlayerInventories(true).Select(i => i.name + $" (Owner: {i.owner})");
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
@@ -142,7 +140,7 @@ namespace InventoryManager
                             e.Player.SendErrorMessage("Вы должны ввести название инвентаря!");
                             return;
                         }
-                        inventoryManager.ShowInventoryInfo(e.Parameters[1].ToLower(), e.Parameters.IndexInRange(2) ? e.Parameters[2] : null);
+                        inventoryManager.ShowInfo(e.Parameters[1].ToLower(), e.Parameters.IndexInRange(2) ? e.Parameters[2] : null);
                     }
                     return;
                 default:

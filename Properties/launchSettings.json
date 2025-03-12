@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "InventoryManager": {
+      "commandName": "Project"
+    },
+    "Профиль 1": {
+      "commandName": "Executable",
+      "executablePath": "D:\\tshock-server\\TShock.Server.exe",
+      "workingDirectory": "D:\\tshock-server"
+    }
+  }
+}

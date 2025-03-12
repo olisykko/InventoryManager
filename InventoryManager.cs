@@ -1,5 +1,5 @@
 ﻿using Microsoft.Xna.Framework;
-using System.Text;
+using Newtonsoft.Json;
 using Terraria;
 using Terraria.GameContent.Events;
 using Terraria.Social;
@@ -15,9 +15,16 @@ namespace InventoryManager
             public Inventory(string name) => this.name = name;
             public struct Item
             {
+                public Item(int type, int stack, byte prefix)
+                {
+                    this.type = type;
+                    this.stack = stack;
+                    this.prefix = prefix;
+                }
                 public int type;
                 public int stack;
                 public byte prefix;
+                public static string Tag(Item item) => item.prefix != 0 ? $"[i/p{item.prefix}:{item.type}]" : $"[i/s{item.stack} : {item.type}]";
             }
 
             public readonly string name;
@@ -25,8 +32,8 @@ namespace InventoryManager
             public bool isPrivate;
             public bool male;
             public bool[] hideVisibleAccessory = new bool[10];
-            public readonly Item[] inventory = new Item[59];
-            public readonly Item[] armor = new Item[20];
+            public Item[] inventory = new Item[59];
+            public Item[] armor = new Item[20];
             public int[] dyes = new int[10];
             public int[] miscEquips = new int[5];
             public int[] miscDyes = new int[5];
@@ -48,14 +55,15 @@ namespace InventoryManager
 
         public InventoryManager(TSPlayer player) => Player = player;
         public TSPlayer Player { get; private set; }
-        public int UserId => Player?.Account?.ID ?? 0;
-
+        public UserAccount? User => Player?.Account;
+        public int UserId => User?.ID ?? 0;
+    
         public void SSC()
         {
             if (Main.ServerSideCharacter)
                 return;
-            MemoryStream stream = new();
-            BinaryWriter writer = new(stream);
+            using MemoryStream stream = new();
+            using BinaryWriter writer = new(stream);
             var currentPosition = 3L;
             writer.BaseStream.Position = 2L;
             writer.Write(7);
@@ -245,76 +253,50 @@ namespace InventoryManager
             isPrivate = false;
             var inventory = GetPlayerInventories().Find(i => i.name == name);
             if (inventory != null)
-                return DB.db.Query("UPDATE Inventories SET IsPrivate = @0 WHERE UserID = @1 AND Name = @2", (isPrivate = !inventory.isPrivate).ToInt(), UserId, name) > 0;
+            {
+                isPrivate = inventory.isPrivate = !inventory.isPrivate;
+                DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE UserID = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), UserId, name);
+            }
             return false;
         }
         public bool Delete(string name)
         {
             return DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name) > 0;
         }
-        public bool Save(string name, bool? setPrivate = null)
+        public bool Save(string name, bool? isPrivate = null)
         {
-            try
+            Inventory inventory = new(name)
             {
-                static string RGB(Color color)
-                {
-                    return string.Format("{0},{1},{2}", color.R, color.G, color.B);
-                }
-
-                string hideVisibleAccessory = string.Join(",", Player.TPlayer.hideVisibleAccessory.Select(i => i.ToInt()));
-                string inventory = string.Join("~", Player.TPlayer.inventory.Select(i => $"{i.type},{i.stack},{i.prefix}"));
-                string armor = string.Join("~", Player.TPlayer.armor.Select(i => $"{i.type},{i.prefix}"));
-                string dye = string.Join(",", Player.TPlayer.dye.Select(i => i.type));
-                string miscEquips = string.Join(",", Player.TPlayer.miscEquips.Select(i => i.type));
-                string miscDyes = string.Join(",", Player.TPlayer.miscDyes.Select(i => i.type));
-                var eyeColor = RGB(Player.TPlayer.eyeColor);
-                var skinColor = RGB(Player.TPlayer.skinColor);
-                var hairColor = RGB(Player.TPlayer.hairColor);
-                var shirtColor = RGB(Player.TPlayer.shirtColor);
-                var underShirtColor = RGB(Player.TPlayer.underShirtColor);
-                var pantsColor = RGB(Player.TPlayer.pantsColor);
-                var shoeColor = RGB(Player.TPlayer.shoeColor);
-                var male = Player.TPlayer.Male;
-                var skinVariant = Player.TPlayer.skinVariant;
-                var hair = Player.TPlayer.hair;
-
-                bool isPrivate = setPrivate ?? (GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true);
-                DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name);
-                return DB.db.Query(@"INSERT INTO Inventories VALUES (@0, @1, @2, @3, @4, @5, @6, @7, @8, @9, @10, @11, @12, @13, @14, @15, @16, @17, @18, @19, @20, @21)",
-                    Player.Account.Name,
-                    UserId,
-                    name,
-                    inventory,
-                    armor,
-                    dye,
-                    hideVisibleAccessory,
-                    miscEquips,
-                    miscDyes,
-                    male,
-                    hair,
-                    skinVariant,
-                    skinColor,
-                    eyeColor,
-                    hairColor,
-                    shirtColor,
-                    underShirtColor,
-                    pantsColor,
-                    shoeColor,
-                    Player.TPlayer.hideMisc.value,
-                    Player.TPlayer.unlockedSuperCart.ToInt(),
-                    isPrivate.ToInt() // pay genis
-                ) > 0;
-            }
-            catch (Exception ex)
-            {
-                TShock.Log.ConsoleError("[InvenoryManager Error]: {0}", ex.Message);
-                return false;
-            }
+                inventory = Player.TPlayer.inventory.Select(i => new Inventory.Item(i.type, i.stack, i.prefix)).ToArray(),
+                armor = Player.TPlayer.armor.Select(i => new Inventory.Item(i.type, i.stack, i.prefix)).ToArray(),
+                dyes = Player.TPlayer.dye.Select(i => i.type).ToArray(),
+                miscDyes = Player.TPlayer.miscDyes.Select(i => i.type).ToArray(),
+                miscEquips = Player.TPlayer.miscEquips.Select(i => i.type).ToArray(),
+                hideVisibleAccessory = Player.TPlayer.hideVisibleAccessory,
+                hideMisc = Player.TPlayer.hideMisc.value,
+                eyeColor = Player.TPlayer.eyeColor,
+                hairColor = Player.TPlayer.hairColor,
+                shirtColor = Player.TPlayer.shirtColor,
+                underShirtColor = Player.TPlayer.underShirtColor,
+                pantsColor = Player.TPlayer.pantsColor,
+                shoeColor = Player.TPlayer.shoeColor,
+                skinVariant = Player.TPlayer.skinVariant,
+                skinColor = Player.TPlayer.skinColor,
+                hair = Player.TPlayer.hair,
+                male = Player.TPlayer.Male,
+                superCart = Player.TPlayer.unlockedSuperCart,
+                owner = User.Name,
+                isPrivate = isPrivate ?? GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true,
+            };
+            if (Find(name))
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE UserID = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), UserId, name) > 0;        
+            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2, @3)", User.Name, UserId, name, JsonConvert.SerializeObject(inventory)) > 0;
         }
-        public bool Load(string name, string owner = null)
+        public bool Load(string name, string? owner = null)
         {
-            var inventory = GetPlayerInventories(true).Find(i => i.name == name &&
-            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? owner == Player.Account.Name : i.owner == owner)));
+            var inventory = string.IsNullOrEmpty(owner) ?
+            GetPlayerInventories().Find(i => i.name == name) :
+            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User.Name)));
             if (inventory != null)
             {
                 SSC();
@@ -356,6 +338,7 @@ namespace InventoryManager
                 Player.TPlayer.skinVariant = inventory.skinVariant;
                 Player.TPlayer.hideVisibleAccessory = inventory.hideVisibleAccessory;
                 Player.TPlayer.hideMisc = inventory.hideMisc;
+                Player.TPlayer.enabledSuperCart = inventory.superCart;
 
                 NetMessage.SendData(4, -1, -1, null, Player.Index);
                 LoadInventory?.Invoke(Player.Index, player);
@@ -367,36 +350,14 @@ namespace InventoryManager
         {
             return GetPlayerInventories().Find(i => i.name == name) != null;
         }
-        private static string ItemTag(Inventory.Item item) =>
-            item.prefix != 0 ? $"[i/p{item.prefix}:{item.type}]" : $"[i/s{item.stack}:{item.type}]";
-
-        private static string GenerateItemLine(Inventory.Item[] items, int start, int end) =>
-            string.Join("  ", items[start..end].Select(item => item.type == 0 ? "  " : ItemTag(item))) + "  ";
-
-        private static string GenerateInventoryText(Inventory.Item[] inventory) =>
-            string.Join("\r\n", Enumerable.Range(0, inventory.Length / 10)
-                .Select(row => string.Join("  ", inventory.Skip(row * 10).Take(10).Select(item => item.type == 0 ? " " : ItemTag(item)))));
-
-        private static string GenerateItemsText(int[] items, bool skipEmpty = false)
+        public void ShowInfo(string name, string? owner = null)
         {
-            var itemTexts = items
-                .Where(item => !skipEmpty || item != 0)
-                .Select(item => item != 0 ? $"[i:{item}]" : string.Empty) 
-
-                .Where(text => !string.IsNullOrWhiteSpace(text));
-
-            var text = string.Join("  ", itemTexts);
-
-            return string.IsNullOrEmpty(text) ? string.Empty : text;
-        }
-
-        public void ShowInventoryInfo(string name, string owner = null)
-        {
-            var inventory = GetPlayerInventories(true).Find(i => i.name == name && 
-            (owner == null ? i.owner == Player.Account.Name : (i.isPrivate ? owner == Player.Account.Name : i.owner == owner)));
+            var inventory = string.IsNullOrEmpty(owner) ?
+            GetPlayerInventories().Find(i => i.name == name) :
+            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User.Name)));
             if (inventory == null)
             {
-                Player.SendErrorMessage("Инвентарь не найден или является приватным!");
+                Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
                 return;
             }
             Player.SendSuccessMessage($"Информация об инвентаре '{inventory.name}' игрока {inventory.owner}:");
@@ -407,89 +368,38 @@ namespace InventoryManager
             Player.SendMessage(GenerateItemLine(inventory.armor, 0, 10), Color.White);
             Player.SendMessage(GenerateItemLine(inventory.armor, 10, 20), Color.White);
             var dyesText = GenerateItemsText(inventory.dyes);
-            if (!string.IsNullOrEmpty(dyesText)) 
+            if (!string.IsNullOrEmpty(dyesText))
                 Player.SendMessage(dyesText, Color.White);
             Player.SendSuccessMessage("Экипировка:");
             var miscEquipsText = GenerateItemsText(inventory.miscEquips);
-            if (!string.IsNullOrEmpty(miscEquipsText)) 
+            if (!string.IsNullOrEmpty(miscEquipsText))
                 Player.SendMessage(miscEquipsText, Color.White);
             var miscDyesText = GenerateItemsText(inventory.miscDyes);
-            if (!string.IsNullOrEmpty(miscDyesText)) 
+            if (!string.IsNullOrEmpty(miscDyesText))
                 Player.SendMessage(miscDyesText, Color.White);
         }
 
-
+        private static string GenerateItemLine(Inventory.Item[] items, int start, int end) =>
+            string.Join("  ", items[start..end].Select(i => i.type == 0 ? "  " : Inventory.Item.Tag(i))) + "  ";
+        private static string GenerateInventoryText(Inventory.Item[] inventory) =>
+            string.Join("\r\n", Enumerable.Range(0, inventory.Length / 10)
+                .Select(row => string.Join("  ", inventory.Skip(row * 10).Take(10).Select(i => i.type == 0 ? "  " : Inventory.Item.Tag(i)))));
+        private static string GenerateItemsText(int[] items, bool skipEmpty = false)
+        {
+            var itemTexts = items
+                .Where(item => !skipEmpty || item != 0)
+                .Select(item => item != 0 ? $"[i:{item}]" : string.Empty) 
+                .Where(text => !string.IsNullOrWhiteSpace(text));
+            var text = string.Join("  ", itemTexts);
+            return string.IsNullOrEmpty(text) ? string.Empty : text;
+        }
         public List<Inventory> GetPlayerInventories(bool includeOthers = false)
         {
             List<Inventory> inventories = new();
-            string query = includeOthers ?
-                "SELECT *, Username as Owner FROM Inventories WHERE IsPrivate = 0 OR UserID = @0" :
-                "SELECT *, Username as Owner FROM Inventories WHERE UserID = @0";
-
-            using var reader = DB.db.QueryReader(query, UserId);
-            while (reader.Read())
-            {
-                var Inventory = reader.Get<string>("Inventory").Split("~");
-                var Armor = reader.Get<string>("Armor").Split("~");
-                var HideVisibleAccessory = reader.Get<string>("HideVisibleAccessory").Split(",");
-                var Dyes = reader.Get<string>("Dye").Split(",");
-                var MiscDyes = reader.Get<string>("MiscDyes").Split(",");
-                var MiscEquips = reader.Get<string>("MiscEquips").Split(",");
-                var EyeColor = reader.Get<string>("EyeColor").Split(',');
-                var SkinColor = reader.Get<string>("SkinColor").Split(',');
-                var PantsColor = reader.Get<string>("PantsColor").Split(',');
-                var ShirtColor = reader.Get<string>("ShirtColor").Split(',');
-                var UnderShirtColor = reader.Get<string>("UnderShirtColor").Split(',');
-                var ShoeColor = reader.Get<string>("ShoeColor").Split(',');
-                var HairColor = reader.Get<string>("HairColor").Split(',');
-
-                Inventory inventory = new(reader.Get<string>("Name"))
-                {
-                    owner = reader.Get<string>("Owner"),
-                    isPrivate = reader.Get<int>("IsPrivate") == 1
-                };
-                for (int i = 0; i < Inventory?.Length; i++)
-                {
-                    var item = Inventory[i].Split(',');
-                    if (item.IndexInRange(2))
-                    {
-                        inventory.inventory[i].type = int.Parse(item[0]);
-                        inventory.inventory[i].stack = int.Parse(item[1]);
-                        inventory.inventory[i].prefix = byte.Parse(item[2]);
-                    }
-                }
-
-                for (int i = 0; i < Armor?.Length; i++)
-                {
-                    var item = Armor[i].Split(',');
-                    if (item.IndexInRange(1))
-                    {
-                        inventory.armor[i].type = int.Parse(item[0]);
-                        inventory.armor[i].prefix = byte.Parse(item[1]);
-                    }
-                }
-
-                inventory.dyes = Dyes.Select(i => int.Parse(i)).ToArray();
-                inventory.miscDyes = MiscDyes.Select(i => int.Parse(i)).ToArray();
-                inventory.miscEquips = MiscEquips.Select(i => int.Parse(i)).ToArray();
-                inventory.hideVisibleAccessory = HideVisibleAccessory.Select(i => i == "1").ToArray();
-
-                inventory.eyeColor = new(byte.Parse(EyeColor[0]), byte.Parse(EyeColor[1]), byte.Parse(EyeColor[2]));
-                inventory.skinColor = new(byte.Parse(SkinColor[0]), byte.Parse(SkinColor[1]), byte.Parse(SkinColor[2]));
-                inventory.hairColor = new(byte.Parse(HairColor[0]), byte.Parse(HairColor[1]), byte.Parse(HairColor[2]));
-                inventory.shirtColor = new(byte.Parse(ShirtColor[0]), byte.Parse(ShirtColor[1]), byte.Parse(ShirtColor[2]));
-                inventory.underShirtColor = new(byte.Parse(UnderShirtColor[0]), byte.Parse(UnderShirtColor[1]), byte.Parse(UnderShirtColor[2]));
-                inventory.pantsColor = new(byte.Parse(PantsColor[0]), byte.Parse(PantsColor[1]), byte.Parse(PantsColor[2]));
-                inventory.shoeColor = new(byte.Parse(ShoeColor[0]), byte.Parse(ShoeColor[1]), byte.Parse(ShoeColor[2]));
-
-                inventory.male = reader.Get<string>("Male") == "1";
-                inventory.skinVariant = reader.Get<int>("SkinVariant");
-                inventory.hair = reader.Get<int>("Hair");
-                inventory.hideMisc = (byte)reader.Get<int>("HideMisc");
-                inventory.superCart = reader.Get<string>("SuperCart") == "1";
-                inventories.Add(inventory);
-            }
-            return inventories;
+            using var reader = DB.db.QueryReader("SELECT * FROM Inventories");
+            while (reader.Read())            
+                inventories.Add(JsonConvert.DeserializeObject<Inventory>(reader.Get<string>("Inventory")));
+            return inventories.Where(i => includeOthers || i.owner == Player.Account.Name).ToList();
         }
     }
 }
