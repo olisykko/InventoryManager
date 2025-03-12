@@ -296,7 +296,7 @@ namespace InventoryManager
         {
             var inventory = string.IsNullOrEmpty(owner) ?
             GetPlayerInventories().Find(i => i.name == name) :
-            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User.Name)));
+            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User?.Name)));
             if (inventory != null)
             {
                 SSC();
@@ -354,7 +354,7 @@ namespace InventoryManager
         {
             var inventory = string.IsNullOrEmpty(owner) ?
             GetPlayerInventories().Find(i => i.name == name) :
-            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User.Name)));
+            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User?.Name)));
             if (inventory == null)
             {
                 Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
