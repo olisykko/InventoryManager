@@ -41,11 +41,6 @@ namespace InventoryManager
                         string name = e.Parameters[1].ToLower();
                         if (inventoryManager.Load(name, e.Parameters.IndexInRange(2) ? e.Parameters[2] : null))
                             e.Player.SendSuccessMessage("Вы загрузили инвентарь '{0}'!", name);
-                        else
-                        {
-                            e.Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
-                            e.Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
-                        }
                     }
                     return;
                 case "save":

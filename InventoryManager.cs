@@ -297,54 +297,56 @@ namespace InventoryManager
             var inventory = string.IsNullOrEmpty(owner) ?
             GetPlayerInventories().Find(i => i.name == name) :
             GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User?.Name)));
-            if (inventory != null)
+            if (inventory == null)
             {
-                SSC();
-                var player = (Player)Player.TPlayer.Clone();
-                for (int i = 0; i < 59; i++)
-                {
-                    Player.TPlayer.inventory[i].SetDefaults(inventory.inventory[i].type);
-                    Player.TPlayer.inventory[i].stack = inventory.inventory[i].stack;
-                    Player.TPlayer.inventory[i].prefix = inventory.inventory[i].prefix;
-                    NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i, inventory.inventory[i].prefix);
-                }
-                for (int i = 0; i < 20; i++)
-                {
-                    Player.TPlayer.armor[i].SetDefaults(inventory.armor[i].type);
-                    Player.TPlayer.armor[i].Prefix(inventory.armor[i].prefix);
-                    NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 59, inventory.armor[i].prefix);
-                }
-                for (int i = 0; i < 10; i++)
-                {
-                    Player.TPlayer.dye[i].SetDefaults(inventory.dyes[i]);
-                    NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 79);
-                }
-                for (int i = 0; i < 5; i++)
-                {
-                    Player.TPlayer.miscEquips[i].SetDefaults(inventory.miscEquips[i]);
-                    Player.TPlayer.miscDyes[i].SetDefaults(inventory.miscDyes[i]);
-                    NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 89);
-                    NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 94);
-                }
-                Player.TPlayer.shoeColor = inventory.shoeColor;
-                Player.TPlayer.pantsColor = inventory.pantsColor;
-                Player.TPlayer.underShirtColor = inventory.underShirtColor;
-                Player.TPlayer.shirtColor = inventory.shirtColor;
-                Player.TPlayer.hairColor = inventory.hairColor;
-                Player.TPlayer.hair = inventory.hair;
-                Player.TPlayer.Male = inventory.male;
-                Player.TPlayer.eyeColor = inventory.eyeColor;
-                Player.TPlayer.skinColor = inventory.skinColor;
-                Player.TPlayer.skinVariant = inventory.skinVariant;
-                Player.TPlayer.hideVisibleAccessory = inventory.hideVisibleAccessory;
-                Player.TPlayer.hideMisc = inventory.hideMisc;
-                Player.TPlayer.enabledSuperCart = inventory.superCart;
-
-                NetMessage.SendData(4, -1, -1, null, Player.Index);
-                LoadInventory?.Invoke(Player.Index, player);
-                return true;
+                Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
+                Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
+                return false;
             }
-            return false;
+            SSC();
+            var player = (Player)Player.TPlayer.Clone();
+            for (int i = 0; i < 59; i++)
+            {
+                Player.TPlayer.inventory[i].SetDefaults(inventory.inventory[i].type);
+                Player.TPlayer.inventory[i].stack = inventory.inventory[i].stack;
+                Player.TPlayer.inventory[i].prefix = inventory.inventory[i].prefix;
+                NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i, inventory.inventory[i].prefix);
+            }
+            for (int i = 0; i < 20; i++)
+            {
+                Player.TPlayer.armor[i].SetDefaults(inventory.armor[i].type);
+                Player.TPlayer.armor[i].Prefix(inventory.armor[i].prefix);
+                NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 59, inventory.armor[i].prefix);
+            }
+            for (int i = 0; i < 10; i++)
+            {
+                Player.TPlayer.dye[i].SetDefaults(inventory.dyes[i]);
+                NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 79);
+            }
+            for (int i = 0; i < 5; i++)
+            {
+                Player.TPlayer.miscEquips[i].SetDefaults(inventory.miscEquips[i]);
+                Player.TPlayer.miscDyes[i].SetDefaults(inventory.miscDyes[i]);
+                NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 89);
+                NetMessage.SendData(5, Player.Index, -1, null, Player.Index, i + 94);
+            }
+            Player.TPlayer.shoeColor = inventory.shoeColor;
+            Player.TPlayer.pantsColor = inventory.pantsColor;
+            Player.TPlayer.underShirtColor = inventory.underShirtColor;
+            Player.TPlayer.shirtColor = inventory.shirtColor;
+            Player.TPlayer.hairColor = inventory.hairColor;
+            Player.TPlayer.hair = inventory.hair;
+            Player.TPlayer.Male = inventory.male;
+            Player.TPlayer.eyeColor = inventory.eyeColor;
+            Player.TPlayer.skinColor = inventory.skinColor;
+            Player.TPlayer.skinVariant = inventory.skinVariant;
+            Player.TPlayer.hideVisibleAccessory = inventory.hideVisibleAccessory;
+            Player.TPlayer.hideMisc = inventory.hideMisc;
+            Player.TPlayer.enabledSuperCart = inventory.superCart;
+            NetMessage.SendData(4, -1, -1, null, Player.Index);
+
+            LoadInventory?.Invoke(Player.Index, player);
+            return true;
         }
         public bool Find(string name)
         {
