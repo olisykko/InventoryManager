@@ -27,7 +27,8 @@ namespace InventoryManager
                     e.Player.SendInfoMessage("/inv load <Inventory Name> <Owner? (Account Name)> (Загружает ваш или чужой инвентарь.)");
                     e.Player.SendInfoMessage("/inv rename <Inventory Name> <New Inventory Name> (Переименует ваш инвентарь.)");
                     e.Player.SendInfoMessage("/inv del <Inventory Name> (Удаляет ваш инвентарь.)");
-                    e.Player.SendInfoMessage("/inv list <Page?> (Список ваших или публичных инвентарей.)");
+                    e.Player.SendInfoMessage("/inv list <Page?> (Список ваших инвентарей.)");
+                    e.Player.SendInfoMessage("/inv listall <Page?> (Список ваших инвентарей или публичных.)");
                     e.Player.SendInfoMessage("/inv info <Inventory Name> <Owner? (Account Name)> (Информация о инвентаре.)");
                     e.Player.SendInfoMessage("/inv privacy <Inventory Name> (Изменяет публичность инвентаря.)");
                     return;
@@ -65,11 +66,24 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
+                        var inventoryList = inventoryManager.GetPlayerInventories().Select(i => i.name);
+                        PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
+                        {
+                            HeaderFormat = "Список ваших сохранённых инвентарей.",
+                            FooterFormat = "Следующая страница /inv list {0}",
+                            NothingToDisplayString = "Нет доступных инвентарей."
+                        });
+                    }
+                    return;
+                case "listall":
+                    {
+                        if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
+                            return;
                         var inventoryList = inventoryManager.GetPlayerInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account.Name).Select(i => i.name + $" (Owner: {i.owner})");
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
-                            FooterFormat = "Следующая страница /inv list {0}",
+                            FooterFormat = "Следующая страница /inv listall {0}",
                             NothingToDisplayString = "Нет доступных инвентарей."
                         });
                     }
