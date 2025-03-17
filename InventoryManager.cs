@@ -66,7 +66,7 @@ namespace InventoryManager
             using BinaryWriter writer = new(stream);
             var currentPosition = 3L;
             writer.BaseStream.Position = 2L;
-            writer.Write(7);
+            writer.Write((byte)7);
             writer.BaseStream.Position = currentPosition;
             writer.Write((int)Main.time);
             BitsByte bitsByte = 0;
