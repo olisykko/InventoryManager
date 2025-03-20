@@ -66,6 +66,11 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
+                        if (!e.Player.IsLoggedIn)
+                        {
+                            e.Player.SendErrorMessage("Вы должны быть зарегистрированы, чтобы посмотреть список ваших инвентарей!");
+                            return;
+                        }
                         var inventoryList = inventoryManager.GetPlayerInventories().Select(i => i.name);
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
@@ -79,7 +84,7 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
-                        var inventoryList = inventoryManager.GetPlayerInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account.Name).Select(i => i.name + $" (Owner: {i.owner})");
+                        var inventoryList = inventoryManager.GetPlayerInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account?.Name).Select(i => i.name + $" (Owner: {i.owner})");
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
