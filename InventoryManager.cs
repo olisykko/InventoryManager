@@ -401,7 +401,7 @@ namespace InventoryManager
             using var reader = DB.db.QueryReader("SELECT * FROM Inventories");
             while (reader.Read())            
                 inventories.Add(JsonConvert.DeserializeObject<Inventory>(reader.Get<string>("Inventory")));
-            return inventories.Where(i => includeOthers || i.owner == Player.Account.Name).ToList();
+            return inventories.Where(i => includeOthers || i.owner == User?.Name).ToList();
         }
     }
 }
