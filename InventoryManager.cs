@@ -24,7 +24,7 @@ namespace InventoryManager
                 public int type;
                 public int stack;
                 public byte prefix;
-                public static string Tag(Item item) => item.prefix != 0 ? $"[i/p{item.prefix}:{item.type}]" : $"[i/s{item.stack} : {item.type}]";
+                public readonly string Tag() => prefix != 0 ? $"[i/p{prefix}:{type}]" : $"[i/s{stack} : {type}]";
             }
 
             public readonly string name;
@@ -382,10 +382,10 @@ namespace InventoryManager
         }
 
         private static string GenerateItemLine(Inventory.Item[] items, int start, int end) =>
-            string.Join("  ", items[start..end].Select(i => i.type == 0 ? "  " : Inventory.Item.Tag(i))) + "  ";
+            string.Join("  ", items[start..end].Select(i => i.type == 0 ? "  " : i.Tag())) + "  ";
         private static string GenerateInventoryText(Inventory.Item[] inventory) =>
             string.Join("\r\n", Enumerable.Range(0, inventory.Length / 10)
-                .Select(row => string.Join("  ", inventory.Skip(row * 10).Take(10).Select(i => i.type == 0 ? "  " : Inventory.Item.Tag(i)))));
+                .Select(row => string.Join("  ", inventory.Skip(row * 10).Take(10).Select(i => i.type == 0 ? "  " : i.Tag()))));
         private static string GenerateItemsText(int[] items, bool skipEmpty = false)
         {
             var itemTexts = items
