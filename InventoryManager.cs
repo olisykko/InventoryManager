@@ -293,7 +293,7 @@ namespace InventoryManager
             };
             if (Find(name))
                 return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), Username, name) > 0;        
-            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @2, @3)", Username, name, JsonConvert.SerializeObject(inventory)) > 0;
+            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2)", Username, name, JsonConvert.SerializeObject(inventory)) > 0;
         }
         public bool Load(string name, string? owner = null)
         {
