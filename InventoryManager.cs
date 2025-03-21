@@ -249,7 +249,7 @@ namespace InventoryManager
         {
             exists = Find(newName);
             if (Find(name) && !exists)
-                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, Username, name) > 0;
+                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE Username = @1 AND Name = @2", newName, Username, name) > 0;
             return false;
         }
         public bool SetPrivacy(string name, out bool isPrivate)
