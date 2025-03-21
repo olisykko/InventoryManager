@@ -12,7 +12,11 @@ namespace InventoryManager
     {
         public class Inventory
         {
-            public Inventory(string name) => this.name = name;
+            public Inventory(string name, string owner)
+            {
+                this.name = name;
+                this.owner = owner;
+            }
             public struct Item
             {
                 public Item(int type, int stack, byte prefix)
@@ -28,7 +32,7 @@ namespace InventoryManager
             }
 
             public readonly string name;
-            public string owner;
+            public readonly string owner;
             public bool isPrivate;
             public bool male;
             public bool[] hideVisibleAccessory = new bool[10];
@@ -56,7 +60,7 @@ namespace InventoryManager
         public InventoryManager(TSPlayer player) => Player = player;
         public TSPlayer Player { get; private set; }
         public UserAccount? User => Player?.Account;
-        public int UserId => User?.ID ?? 0;
+        public string? Username => User?.Name;
     
         public void SSC()
         {
@@ -245,7 +249,7 @@ namespace InventoryManager
         {
             exists = Find(newName);
             if (Find(name) && !exists)
-                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, UserId, name) > 0;
+                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE UserID = @1 AND Name = @2", newName, Username, name) > 0;
             return false;
         }
         public bool SetPrivacy(string name, out bool isPrivate)
@@ -255,17 +259,17 @@ namespace InventoryManager
             if (inventory != null)
             {
                 isPrivate = inventory.isPrivate = !inventory.isPrivate;
-                DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE UserID = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), UserId, name);
+                DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), Username, name);
             }
             return false;
         }
         public bool Delete(string name)
         {
-            return DB.db.Query("DELETE FROM Inventories WHERE UserID = @0 AND Name = @1", UserId, name) > 0;
+            return DB.db.Query("DELETE FROM Inventories WHERE Username = @0 AND Name = @1", Username, name) > 0;
         }
         public bool Save(string name, bool? isPrivate = null)
         {
-            Inventory inventory = new(name)
+            Inventory inventory = new(name, Username)
             {
                 inventory = Player.TPlayer.inventory.Select(i => new Inventory.Item(i.type, i.stack, i.prefix)).ToArray(),
                 armor = Player.TPlayer.armor.Select(i => new Inventory.Item(i.type, i.stack, i.prefix)).ToArray(),
@@ -285,12 +289,11 @@ namespace InventoryManager
                 hair = Player.TPlayer.hair,
                 male = Player.TPlayer.Male,
                 superCart = Player.TPlayer.unlockedSuperCart,
-                owner = User.Name,
                 isPrivate = isPrivate ?? GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true,
             };
             if (Find(name))
-                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE UserID = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), UserId, name) > 0;        
-            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2, @3)", User.Name, UserId, name, JsonConvert.SerializeObject(inventory)) > 0;
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), Username, name) > 0;        
+            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @2, @3)", Username, name, JsonConvert.SerializeObject(inventory)) > 0;
         }
         public bool Load(string name, string? owner = null)
         {

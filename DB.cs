@@ -13,7 +13,6 @@ namespace InventoryManager
             SqlTableCreator sqlTable = new(db, new SqliteQueryCreator());
             sqlTable.EnsureTableStructure(new SqlTable("Inventories",
                 new SqlColumn("Username", MySqlDbType.Text),
-                new SqlColumn("UserID", MySqlDbType.Int32),
                 new SqlColumn("Name", MySqlDbType.Text),
                 new SqlColumn("Inventory", MySqlDbType.Text)));
         }
