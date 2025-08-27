@@ -20,9 +20,9 @@ namespace InventoryManager
         private static void OnInventory(CommandArgs e)
         {
             InventoryManager inventoryManager = new(e.Player);
-            switch (e.Parameters.Count == 0 ? "help" : e.Parameters[0].ToLower())
+            switch (e.Parameters.FirstOrDefault()?.ToLower())
             {
-                case "help":
+                default:
                     e.Player.SendInfoMessage("/inv save <Inventory Name> <Private? (true/false)> (Сохраняет инвентарь.)");
                     e.Player.SendInfoMessage("/inv load <Inventory Name> <Owner? (Account Name)> (Загружает ваш или чужой инвентарь.)");
                     e.Player.SendInfoMessage("/inv rename <Inventory Name> <New Inventory Name> (Переименует ваш инвентарь.)");
@@ -157,8 +157,6 @@ namespace InventoryManager
                         inventoryManager.ShowInfo(e.Parameters[1].ToLower(), e.Parameters.IndexInRange(2) ? e.Parameters[2] : null);
                     }
                     return;
-                default:
-                    goto case "help";
             }
         }
     }

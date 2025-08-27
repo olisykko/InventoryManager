@@ -31,7 +31,7 @@ namespace InventoryManager
                 public readonly string Tag() => prefix != 0 ? $"[i/p{prefix}:{type}]" : $"[i/s{stack} : {type}]";
             }
 
-            public readonly string name;
+            public string name;
             public readonly string owner;
             public bool isPrivate;
             public bool male;
@@ -52,6 +52,11 @@ namespace InventoryManager
             public Color shoeColor;
             public byte hideMisc;
             public bool superCart;
+
+            public string ToJson()
+            {
+                return JsonConvert.SerializeObject(this, Formatting.Indented);
+            }
         }
 
         public delegate void LoadD(int playerIndex, Player oldPlayer);
@@ -248,8 +253,12 @@ namespace InventoryManager
         public bool Rename(string name, string newName, out bool exists)
         {
             exists = Find(newName);
-            if (Find(name) && !exists)
-                return DB.db.Query("UPDATE Inventories SET Name = @0 WHERE Username = @1 AND Name = @2", newName, Username, name) > 0;
+            var inventory = GetPlayerInventories().Find(i => i.name == name);
+            if (inventory != null && !exists)
+            {
+                inventory.name = newName;
+                return DB.db.Query("UPDATE Inventories SET Name = @0, Inventory = @1 WHERE Username = @2 AND Name = @3", newName, inventory.ToJson(), Username, name) > 0;
+            }
             return false;
         }
         public bool SetPrivacy(string name, out bool isPrivate)
@@ -259,7 +268,7 @@ namespace InventoryManager
             if (inventory != null)
             {
                 isPrivate = inventory.isPrivate = !inventory.isPrivate;
-                DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), Username, name);
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", inventory.ToJson(), Username, name) > 0;
             }
             return false;
         }
@@ -292,8 +301,8 @@ namespace InventoryManager
                 isPrivate = isPrivate ?? GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true,
             };
             if (Find(name))
-                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", JsonConvert.SerializeObject(inventory), Username, name) > 0;        
-            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2)", Username, name, JsonConvert.SerializeObject(inventory)) > 0;
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", inventory.ToJson(), Username, name) > 0;        
+            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2)", Username, name, inventory.ToJson()) > 0;
         }
         public bool Load(string name, string? owner = null)
         {
@@ -404,7 +413,7 @@ namespace InventoryManager
             using var reader = DB.db.QueryReader("SELECT * FROM Inventories");
             while (reader.Read())            
                 inventories.Add(JsonConvert.DeserializeObject<Inventory>(reader.Get<string>("Inventory")));
-            return inventories.Where(i => includeOthers || i.owner == User?.Name).ToList();
+            return inventories.Where(i => includeOthers || i.owner == Username).ToList();
         }
     }
 }
