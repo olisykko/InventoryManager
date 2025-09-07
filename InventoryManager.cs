@@ -250,23 +250,23 @@ namespace InventoryManager
             writer.BaseStream.Position = currentPosition;
             Player.SendRawData(stream.ToArray());
         }
-        public bool Rename(string name, string newName, out bool exists)
+        public bool Rename(ref string name, string newName, out bool exists)
         {
-            exists = Find(newName);
-            var inventory = GetPlayerInventories().Find(i => i.name == name);
-            if (inventory != null && !exists)
+            exists = Exists(newName);
+            if (TryGetInventory(name, Username, out var inventory) && !exists)
             {
+                name = inventory.name;
                 inventory.name = newName;
-                return DB.db.Query("UPDATE Inventories SET Name = @0, Inventory = @1 WHERE Username = @2 AND Name = @3", newName, inventory.ToJson(), Username, name) > 0;
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0, Name = @1 WHERE Username = @2 AND Name = @3", inventory.ToJson(), newName, Username, name) > 0;
             }
             return false;
         }
-        public bool SetPrivacy(string name, out bool isPrivate)
+        public bool SetPrivacy(ref string name, out bool isPrivate)
         {
             isPrivate = false;
-            var inventory = GetPlayerInventories().Find(i => i.name == name);
-            if (inventory != null)
+            if (TryGetInventory(name, Username, out var inventory))
             {
+                name = inventory.name;
                 isPrivate = inventory.isPrivate = !inventory.isPrivate;
                 return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", inventory.ToJson(), Username, name) > 0;
             }
@@ -298,23 +298,18 @@ namespace InventoryManager
                 hair = Player.TPlayer.hair,
                 male = Player.TPlayer.Male,
                 superCart = Player.TPlayer.unlockedSuperCart,
-                isPrivate = isPrivate ?? GetPlayerInventories().Find(i => i.name == name)?.isPrivate ?? true,
+                isPrivate = isPrivate ?? GetInventories().Find(i => i.name == name)?.isPrivate ?? true,
             };
-            if (Find(name))
-                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", inventory.ToJson(), Username, name) > 0;        
-            return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2)", Username, name, inventory.ToJson()) > 0;
+            if (Exists(name))
+                return DB.db.Query("UPDATE Inventories SET Inventory = @0 WHERE Username = @1 AND Name = @2", inventory.ToJson(), Username, name) > 0;
+            else
+                return DB.db.Query("INSERT INTO Inventories VALUES (@0, @1, @2)", Username, name, inventory.ToJson()) > 0;
         }
-        public bool Load(string name, string? owner = null)
+        public bool Load(ref string name, string? owner = null)
         {
-            var inventory = string.IsNullOrEmpty(owner) ?
-            GetPlayerInventories().Find(i => i.name == name) :
-            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User?.Name)));
-            if (inventory == null)
-            {
-                Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
-                Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
+            if (!TryGetInventory(name, owner, out var inventory))
                 return false;
-            }
+            name = inventory.name;
             SSC();
             var player = (Player)Player.TPlayer.Clone();
             for (int i = 0; i < 59; i++)
@@ -356,24 +351,35 @@ namespace InventoryManager
             Player.TPlayer.hideMisc = inventory.hideMisc;
             Player.TPlayer.enabledSuperCart = inventory.superCart;
             NetMessage.SendData(4, -1, -1, null, Player.Index);
-
             LoadInventory?.Invoke(Player.Index, player);
             return true;
         }
-        public bool Find(string name)
+        public bool Exists(string name)
         {
-            return GetPlayerInventories().Find(i => i.name == name) != null;
+            return GetInventories().Any(i => i.name == name);
+        }
+        public bool TryGetInventory(string name, string owner, out Inventory inventory)
+        {
+            inventory = null;
+            var list = FindInventories(name, owner);
+            if (list.Count == 0)
+            {
+                Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
+                Player.SendErrorMessage("Если вы хотите загрузить чужой инвентарь, используйте /inv load <Inventory Name> <Inventory Owner>");
+                return false;
+            }
+            if (list.Count > 1)
+            {
+                Player.SendMultipleMatchError(list.Select(i => $"{i.name} ({i.owner})"));
+                return false;
+            }
+            inventory = list[0];
+            return true;
         }
         public void ShowInfo(string name, string? owner = null)
         {
-            var inventory = string.IsNullOrEmpty(owner) ?
-            GetPlayerInventories().Find(i => i.name == name) :
-            GetPlayerInventories(true).Find(i => i.name == name && (i.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && (!i.isPrivate || i.owner == User?.Name)));
-            if (inventory == null)
-            {
-                Player.SendErrorMessage("Инвентарь '{0}' не найден или является приватным!", name);
+            if (!TryGetInventory(name, owner, out var inventory))
                 return;
-            }
             Player.SendSuccessMessage($"Информация об инвентаре '{inventory.name}' игрока {inventory.owner}:");
             Player.SendSuccessMessage($"Статус: {(inventory.isPrivate ? "Приватный" : "Публичный")}");
             Player.SendSuccessMessage("Основной инвентарь:");
@@ -407,13 +413,65 @@ namespace InventoryManager
             var text = string.Join("  ", itemTexts);
             return string.IsNullOrEmpty(text) ? string.Empty : text;
         }
-        public List<Inventory> GetPlayerInventories(bool includeOthers = false)
+
+        public List<string> FindOwners(string owner)
+        {
+            List<string> startsWith = new();
+            List<string> contains = new();
+            foreach (var inv in GetInventories(true))
+            {
+                if (inv.owner.Equals(owner, StringComparison.OrdinalIgnoreCase))
+                    return new List<string> { inv.owner };
+                else if (inv.owner.StartsWith(owner, StringComparison.OrdinalIgnoreCase) && !startsWith.Contains(inv.owner) && !contains.Contains(inv.owner))
+                    startsWith.Add(inv.owner);
+                else if (inv.owner.Contains(owner, StringComparison.OrdinalIgnoreCase) && !contains.Contains(inv.owner) && !startsWith.Contains(inv.owner))
+                    contains.Add(inv.owner);
+            }
+            if (startsWith.Count != 1)
+                startsWith.AddRange(contains);
+            return startsWith;
+        }
+        public List<Inventory> FindInventories(string name, string? owner = null)
+        {
+            List<Inventory> startsWith = new();
+            List<Inventory> contains = new();
+            if (!string.IsNullOrEmpty(owner) && owner != Username)
+            {
+                var owners = FindOwners(owner);
+                if (owners.Count == 0)
+                {
+                    Player.SendErrorMessage("Владелец инвентаря '{0}' не найден '{1}'!", name, owner);
+                    return new();
+                }
+                if (owners.Count > 1)
+                {
+                    Player.SendMultipleMatchError(owners);
+                    return new();
+                }
+                owner = owners[0];
+            }
+            foreach (var inv in GetInventories(!string.IsNullOrEmpty(owner), owner))
+            {
+                if (inv.name.Equals(name, StringComparison.OrdinalIgnoreCase))
+                    return new List<Inventory> { inv };
+                else if (inv.name.StartsWith(name, StringComparison.OrdinalIgnoreCase))
+                    startsWith.Add(inv);
+                else if (inv.name.Contains(name, StringComparison.OrdinalIgnoreCase))
+                    contains.Add(inv);
+            }
+            if (startsWith.Count != 1)
+                startsWith.AddRange(contains);
+            return startsWith;
+        }
+        public List<Inventory> GetInventories(bool includeOthers = false, string? owner = null)
         {
             List<Inventory> inventories = new();
             using var reader = DB.db.QueryReader("SELECT * FROM Inventories");
             while (reader.Read())            
                 inventories.Add(JsonConvert.DeserializeObject<Inventory>(reader.Get<string>("Inventory")));
-            return inventories.Where(i => includeOthers || i.owner == Username).ToList();
+            if (!string.IsNullOrEmpty(owner))
+                return inventories.Where(i => owner == i.owner && !i.isPrivate || i.owner == Username).ToList();
+            return inventories.Where(i => includeOthers && !i.isPrivate || i.owner == Username).ToList();
         }
     }
 }

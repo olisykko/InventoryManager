@@ -5,3 +5,6 @@ dotnet_diagnostic.CS8604.severity = none
 
 # CS8602: Разыменование вероятной пустой ссылки.
 dotnet_diagnostic.CS8602.severity = none
+
+# CS8601: Возможно, назначение-ссылка, допускающее значение NULL.
+dotnet_diagnostic.CS8601.severity = none

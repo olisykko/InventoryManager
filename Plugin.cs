@@ -9,7 +9,7 @@ namespace InventoryManager
     {
         public override string Author => "oli & SteelSeries";
         public override string Name => "InventoryManager";
-        public override Version Version => new("1.5");
+        public override Version Version => new("2.0");
 
         public Plugin(Main main) : base(main) { }
         public override void Initialize()
@@ -40,7 +40,7 @@ namespace InventoryManager
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
-                        if (inventoryManager.Load(name, e.Parameters.IndexInRange(2) ? e.Parameters[2] : null))
+                        if (inventoryManager.Load(ref name, e.Parameters.IndexInRange(2) ? e.Parameters[2] : null))
                             e.Player.SendSuccessMessage("Вы загрузили инвентарь '{0}'!", name);
                     }
                     return;
@@ -57,9 +57,9 @@ namespace InventoryManager
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
-                        bool? setPrivate = e.Parameters.IndexInRange(2) ? (bool.TryParse(e.Parameters[2], out bool result) ? (bool?)result : null) : null;
+                        bool? setPrivate = e.Parameters.IndexInRange(2) ? (bool.TryParse(e.Parameters[2], out bool result) ? result : null) : null;
                         if (inventoryManager.Save(name, setPrivate))
-                            e.Player.SendSuccessMessage("Вы сохранили инвентарь '{0}'! Настройка приватности: {1}", name, inventoryManager.GetPlayerInventories().First(i => i.name == name).isPrivate);
+                            e.Player.SendSuccessMessage("Вы сохранили инвентарь '{0}'! Настройка приватности: {1}", name, inventoryManager.GetInventories().First(i => i.name == name).isPrivate);
                     }
                     return;
                 case "list":
@@ -71,7 +71,7 @@ namespace InventoryManager
                             e.Player.SendErrorMessage("Вы должны быть зарегистрированы, чтобы посмотреть список ваших инвентарей!");
                             return;
                         }
-                        var inventoryList = inventoryManager.GetPlayerInventories().Select(i => i.name);
+                        var inventoryList = inventoryManager.GetInventories().Select(i => i.name);
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список ваших сохранённых инвентарей.",
@@ -84,7 +84,7 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
-                        var inventoryList = inventoryManager.GetPlayerInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account?.Name).Select(i => i.name + $" (Owner: {i.owner})");
+                        var inventoryList = inventoryManager.GetInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account?.Name).Select(i => i.name + $" (Owner: {i.owner})");
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
@@ -118,7 +118,7 @@ namespace InventoryManager
                         }
                         string oldName = e.Parameters[1].ToLower();
                         string newName = e.Parameters[2].ToLower();
-                        if (inventoryManager.Rename(oldName, newName, out var contains))
+                        if (inventoryManager.Rename(ref oldName, newName, out var contains))
                             e.Player.SendSuccessMessage("Инвентарь '{0}' успешно переименован: '{1}'!", oldName, newName);
                         else if (contains)
                             e.Player.SendErrorMessage("Инвентарь '{0}' уже существует!", newName);
@@ -141,7 +141,7 @@ namespace InventoryManager
                             return;
                         }
                         string name = e.Parameters[1].ToLower();
-                        if (inventoryManager.SetPrivacy(name, out var isPrivate))
+                        if (inventoryManager.SetPrivacy(ref name, out var isPrivate))
                             e.Player.SendSuccessMessage("Инвентарь '{0}' теперь {1}!", name, isPrivate ? "приватный" : "публичный");
                         else
                             e.Player.SendErrorMessage("Инвентарь '{0}' не найден! ", name);
