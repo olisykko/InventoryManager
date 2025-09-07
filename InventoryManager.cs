@@ -471,7 +471,7 @@ namespace InventoryManager
                 inventories.Add(JsonConvert.DeserializeObject<Inventory>(reader.Get<string>("Inventory")));
             if (!string.IsNullOrEmpty(owner))
                 return inventories.Where(i => owner == i.owner && !i.isPrivate || i.owner == Username).ToList();
-            return inventories.Where(i => includeOthers && !i.isPrivate || i.owner == Username).ToList();
+            return inventories.Where(i => includeOthers ? (!i.isPrivate && i.owner != Username) : i.owner == Username).ToList();
         }
     }
 }

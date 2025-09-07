@@ -84,7 +84,7 @@ namespace InventoryManager
                     {
                         if (!PaginationTools.TryParsePageNumber(e.Parameters, 1, e.Player, out int page))
                             return;
-                        var inventoryList = inventoryManager.GetInventories(true).Where(i => !i.isPrivate || i.owner == e.Player.Account?.Name).Select(i => i.name + $" (Owner: {i.owner})");
+                        var inventoryList = inventoryManager.GetInventories(true).Select(i => i.name + $" (Owner: {i.owner})");
                         PaginationTools.SendPage(e.Player, page, PaginationTools.BuildLinesFromTerms(inventoryList, maxCharsPerLine: 100), new()
                         {
                             HeaderFormat = "Список сохранённых инвентарей.",
